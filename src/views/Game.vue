@@ -1,7 +1,7 @@
 <template>
   <v-container fill-height fluid>
-    <Login></Login>
-    <GameView></GameView>
+    <Login @ready="test" v-if="!ready"></Login>
+    <GameView v-if="ready"></GameView>
   </v-container>
 </template>
 
@@ -13,12 +13,17 @@ export default {
   name: "Game",
   data() {
     return {
-      dialog: true
+      ready: false
     }
   },
   components: {
     Login,
     GameView
+  },
+  methods: {
+    test(value) {
+      this.ready = value
+    }
   }
 };
 </script>

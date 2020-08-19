@@ -5,16 +5,30 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-      loginDone: true,
+      configDone: true,
+      username: '',
+      userId: null,
   },
   mutations: {
-      setLoginState(state) {
-          state.loginDone = !state.loginDone
+      setConfigState(state) {
+          state.configDone = !state.configDone
+      },
+      setUsername(state, name) {
+          state.username = name
+      },
+      setUserId(state, id) {
+          state.userId = id
       }
   },
   actions: {
-      changeLoginState({commit}) {
-          commit("setLoginState")
+      toggleConfigState({commit}) {
+          commit("setConfigState")
+      },
+      changeUsername({commit}, name) {
+          commit("setUsername", name)
+      },
+      changeId({commit}, id) {
+          commit("setUserId", id)
       }
   }
 })

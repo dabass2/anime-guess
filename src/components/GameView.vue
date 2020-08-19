@@ -1,53 +1,37 @@
 <template>
-    <v-row align="center" justify="center">
-        <v-col cols="auto">
-            <v-card width=500>
-            <v-card-title>Guessing Game</v-card-title>
-            <v-form>
-                <v-text-field
-                v-model="username"
-                placeholder="Anilist Username"
-                ></v-text-field>
-                <v-btn @click="enterUsername()">Submit</v-btn>
-            </v-form>
-            <v-card v-if="gameReady">
-                <v-img :src="answer.character.image.large"></v-img>
-                {{answer.character.name.full}}
-            </v-card>
-            <v-card-actions>
-                <v-row>
-                <v-col>
-                    <v-btn :loading="!gameReady" v-for="choice in choices" :key="choice.id" :disabled="answered && choice.btnDsbl"
-                            @click="userAnswered(choice.character.id)" rounded color="primary">
-                    <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
-                    <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
-                    </v-btn>
-                </v-col>
-                </v-row>
-            </v-card-actions>
-            </v-card>
-            <v-card>
-            {{correct}}
-            {{wrong}}
-            <v-btn :disabled="!answered" icon @click="gameSetup()"><v-icon>fas fa-arrow-right</v-icon></v-btn>
-            </v-card>
-            <v-progress-linear v-model="currTime" color="blue accent-3"></v-progress-linear>
-        </v-col>
-    </v-row>
+  <v-row align="center" justify="center">
+    <v-col cols="auto">
+      <v-card width=500>
+        <v-card v-if="gameReady">
+          <v-img contain height="600" :src="answer.character.image.large"></v-img>
+          {{answer.character.name.full}}
+        </v-card>
+        <v-progress-linear v-model="currTime" color="blue accent-3"></v-progress-linear>
+        <v-card-actions>
+          <v-row>
+            <v-col>
+              <v-btn :loading="!gameReady" v-for="choice in choices" :key="choice.id" :disabled="answered && choice.btnDsbl"
+                      @click="userAnswered(choice.character.id)" rounded :color="(answered) ? choice.btnColor : color">
+                <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
+                <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-card-actions>
+      </v-card>
+      <v-card>
+        {{correct}}
+        {{wrong}}
+        <v-btn :disabled="!answered" icon @click="gameSetup()"><v-icon>fas fa-arrow-right</v-icon></v-btn>
+      </v-card>
+    </v-col>
+  </v-row>
 </template>
 
 <script>
 var cmpList = []
 
 var url = "https://graphql.anilist.co"
-
-var userQuery = `
-query ($name: String) {
-  User (name: $name) {
-    id
-  }
-}
-`
 
 var listQuery = `
 query ($userID: Int) {
@@ -124,24 +108,6 @@ function getRand(arr) {
   return Math.floor(Math.random() * arr.length)
 }
 
-function getUserId(name) {
-  return new Promise(function(resolve, reject) {
-    var variable = {name: name}
-
-    var options = generateOptions(userQuery, variable)
-    
-    fetch(url, options)
-        .then(handleResponse)
-        .then(data => {
-            resolve(data.data.User.id)
-        })
-        .catch(error => {
-          console.error(error)
-          reject()
-        })
-  })
-}
-
 function getUserAnimeList(id) {
   return new Promise(function(resolve, reject) {
     var variable = {userID: id}
@@ -177,8 +143,9 @@ function getRawShowInfo(id) {
           "cover": data.data.Media.coverImage
         }
         let chars = data.data.Media.characters.edges
-        let char = chars[getRand(chars)] // sometimes errors here and then propogates..
-        return ({"character": char.node, "info": showInfo, "btnDsbl": true}) // also store info for buttons
+        let char = chars[getRand(chars)]
+        if (!char) {return null} //sometimes api returns duds so mark as null and deal with later
+        return ({"character": char.node, "info": showInfo, "btnDsbl": true, "btnColor": "primary"}) // also store info for buttons
       })
       .then(rtn => {
         resolve(rtn)
@@ -208,9 +175,14 @@ function generateChoicesAndAnswer(animeArr) {  // make other value for variable 
           // this await is necessary, it keeps execution inside the loop until done
           choice = getRand(animeArr)
           showData = await getRawShowInfo(animeArr[choice].mediaId)
+          if (!showData) { // the aforemention deal with later
+            i -= 1    // literally just do the loop again lole
+            continue
+          }
           rtnArr.push(showData)
           if (i == ansIdx) {
             showData["btnDsbl"] = false
+            showData["btnColor"] = "success"
             ans = showData
           }
         }
@@ -232,11 +204,11 @@ export default {
   name: "GameView",
   data() {
     return {
-      username: '',
       answer: {},
       choices: [],
       gameReady: false,
       answered: false,
+      color: "primary",
       currTime: 0,
       correct: 0,
       wrong: 0,
@@ -244,14 +216,7 @@ export default {
   },
   methods: {
     enterUsername() {
-      // prep username
-      this.username = this.username.toLowerCase() 
-
-      // get user id from anilist api
-      getUserId(this.username)
-      .then(id => {
-        return getUserAnimeList(id)
-      })
+      getUserAnimeList(this.$store.state.userId)
       .then(list => { // get user cmpltd anime list
         cmpList = list
         this.gameSetup()
@@ -295,6 +260,13 @@ export default {
         }
       }, 1000)
     }
+  },
+  created() {
+    this.enterUsername()
   }
 }
 </script>
+
+<style>
+.v-btn__content { width: 100%; white-space: normal; }
+</style>
