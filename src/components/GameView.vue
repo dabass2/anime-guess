@@ -1,7 +1,16 @@
 <template>
   <v-row align="center" justify="center">
     <v-col cols="auto">
-      <v-card width=500>
+      <v-card flat>
+        <v-progress-circular
+          :value="score"
+          color="blue-grey"
+        ></v-progress-circular>
+        {{correct}}
+        {{wrong}}
+        <v-btn :disabled="!answered" icon @click="gameSetup(list)"><v-icon>fas fa-arrow-right</v-icon></v-btn>
+      </v-card>
+      <v-card width=500 flat color="transparent">
         <v-card v-if="gameReady">
           <v-img contain height="600" :src="answer.character.image.large"></v-img>
           {{answer.character.name.full}}
@@ -10,19 +19,21 @@
         <v-card-actions>
           <v-row>
             <v-col>
-              <v-btn :loading="!gameReady" v-for="choice in choices" :key="choice.id" :disabled="answered && choice.btnDsbl"
+              <!-- <v-btn :loading="!gameReady" v-for="choice in choices" :key="choice.id" :disabled="answered && choice.btnDsbl"
                       @click="userAnswered(choice.character.id)" rounded :color="(answered) ? choice.btnColor : color">
                 <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
                 <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
-              </v-btn>
+              </v-btn> -->
+              <v-card v-for="choice in choices" :key="choice.id" ripple rounded :disabled="answered && choice.btnDsbl"
+                      @click="userAnswered(choice.character.id)" :color="(answered) ? choice.btnColor : color">
+                <v-card-text class="text-h6 white--text">
+                  <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
+                  <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
+                </v-card-text>
+              </v-card>
             </v-col>
           </v-row>
         </v-card-actions>
-      </v-card>
-      <v-card>
-        {{correct}}
-        {{wrong}}
-        <v-btn :disabled="!answered" icon @click="gameSetup()"><v-icon>fas fa-arrow-right</v-icon></v-btn>
       </v-card>
     </v-col>
   </v-row>
@@ -43,6 +54,41 @@ query ($userID: Int) {
       name
       entries {
         mediaId
+      }
+    }
+  }
+}
+`
+var malCharQuery = `
+query ($idMal: Int) {
+  Media (idMal: $idMal, type: ANIME) {
+    id
+    title {
+      romaji
+      english
+      native
+    }
+    coverImage {
+      large
+      extraLarge
+      medium
+      color
+    }
+    characters(page: 1) {
+      edges { # Array of character edges
+        node {
+         	id
+          name {
+            first
+            last
+            full
+            native
+          }
+          image {
+            large
+            medium
+          }
+        }
       }
     }
   }
@@ -129,11 +175,18 @@ function getUserAnimeList(id) {
   })
 }
 
-function getRawShowInfo(id) {
+function getRawShowInfo(id, source) {
   return new Promise(function(resolve, reject) {
-    var variable = {id: id}
+    var variable = undefined
+    var options = undefined
 
-    var options = generateOptions(charQuery, variable)
+    if (source == "MAL") {
+      variable = {idMal: id}
+      options = generateOptions(malCharQuery, variable)
+    } else {
+      variable = {id: id}
+      options = generateOptions(charQuery, variable)
+    }
 
     fetch(url, options)
       .then(handleResponse)
@@ -157,7 +210,7 @@ function getRawShowInfo(id) {
   })
 }
 
-function generateChoicesAndAnswer(animeArr) {  // make other value for variable choice amount
+function generateChoicesAndAnswer(animeArr, source) {  // make other value for variable choice amount
   return new Promise(function(resolve, reject) {
     try {
       var choice = null
@@ -174,7 +227,7 @@ function generateChoicesAndAnswer(animeArr) {  // make other value for variable 
         for (let i = 0; i < 4; i++) { // replace 4 with however many choices
           // this await is necessary, it keeps execution inside the loop until done
           choice = getRand(animeArr)
-          showData = await getRawShowInfo(animeArr[choice].mediaId)
+          showData = await getRawShowInfo(animeArr[choice].mediaId, source)
           if (!showData) { // the aforemention deal with later
             i -= 1    // literally just do the loop again lole
             continue
@@ -212,20 +265,27 @@ export default {
       currTime: 0,
       correct: 0,
       wrong: 0,
+      total: 0,
+      score: 0,
+      site: "",
+      list: undefined
     }
   },
   methods: {
     enterUsername() {
-      getUserAnimeList(this.$store.state.userId)
-      .then(list => { // get user cmpltd anime list
-        cmpList = list
-        this.gameSetup()
-      })
+      if (this.site == "MAL") {
+        this.list = this.$store.state.malAniList
+        this.gameSetup(this.list)
+      } else {
+        getUserAnimeList(this.$store.state.userId)
+        .then(list => { // get user cmpltd anime list
+          cmpList = list
+          this.gameSetup(cmpList)
+        })
+      }
     },
-    gameSetup() {
-      // console.log(cmpList.length)
-      // this.choices = []
-      generateChoicesAndAnswer(cmpList)
+    gameSetup(arr) {
+      generateChoicesAndAnswer(arr, this.site)
       .then(choiceAndAns => {
         return choiceAndAns
       })
@@ -238,14 +298,16 @@ export default {
       })
     },
     userAnswered(id) {
+      if (this.answered) {return}
+
       this.answered = true
+      this.total += 1
       if (id == this.answer.character.id) {
         this.correct += 1
-        // console.log("Right")
       } else {
         this.wrong += 1
-        // console.log("Wrong")
       }
+      this.score = (this.correct / this.total) * 100
     },
     startCounter() {
       this.currTime = 0
@@ -262,11 +324,12 @@ export default {
     }
   },
   created() {
+    this.site = this.$store.state.siteChoice
     this.enterUsername()
   }
 }
 </script>
 
 <style>
-.v-btn__content { width: 100%; white-space: normal; }
+/* .v-btn__content { width: 100%; white-space: normal; } */
 </style>

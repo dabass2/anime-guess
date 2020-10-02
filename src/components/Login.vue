@@ -38,6 +38,8 @@
 </template>
 
 <script>
+const jikanjs = require("jikanjs")
+
 var url = "https://graphql.anilist.co"
 
 var userQuery = `
@@ -85,8 +87,48 @@ function getAnilistUserId(name) {
   })
 }
 
-function getMALUserId(name) {
-  return getAnilistUserId(name)
+function getMALAnimelist(name, itr) {
+  return new Promise(function(resolve, reject) {
+    // console.log(itr)
+    jikanjs.loadUser(name, 'animelist', `completed/${itr}`)
+    .then((response) => {
+      // console.log(response.anime)
+      resolve(response.anime)
+    }).catch((error) => {
+      console.log(error)
+      reject(error)
+    })
+  })
+}
+
+function getMALUserList(name) {
+  return new Promise(function(resolve, reject) {
+    try {
+      let idList = null
+      let currList = []
+      let i = 1
+      
+      const forLoop = async () => { 
+        for (;;) { // this is stupid
+          idList = await getMALAnimelist(name, i)
+          // console.log(idList.length)
+          if (idList.length === 0) {
+            break
+          }
+
+          currList = currList.concat(idList)
+          i += 1
+        }
+        resolve(currList)
+      }
+
+      forLoop() // god I hate javascript still
+
+    } catch(error) {
+      console.error(error)
+      reject(error)
+    }  
+    })
 }
 
 export default {
@@ -121,23 +163,41 @@ export default {
       this.isLoading = true
       this.username = this.username.toLowerCase()
       this.$store.dispatch('changeUsername', this.username)
-      var fn = (this.site === "Anilist") ? getAnilistUserId(this.username) : getMALUserId(this.username)
 
-      fn
-      .then(id => {
-        this.$store.dispatch('changeId', id)
-        this.userId = id
-        this.userFound = true
-      })
-      .catch(error => {
-        if (error == 404) {
-          this.errorMsg = "User not found. Please check spelling and try again."
-        }
-        this.error = true
-        this.isLoading = false
-      })
+      if (this.site === "Anilist") {
+        getAnilistUserId(this.username)
+        .then(id => {
+          this.$store.dispatch('changeId', id)
+          this.userId = id
+          this.userFound = true
+        })
+        .catch(error => {
+          if (error == 404) {
+            this.errorMsg = "User not found. Please check spelling and try again."
+          }
+          this.error = true
+          this.isLoading = false
+        })
+      } else {
+        getMALUserList(this.username)
+        .then(list => {
+          let malIdList = []
+          list.forEach(anime => {
+            malIdList.push({"mediaId": anime.mal_id})
+          })
+          // console.log(malIdList)
+          this.$store.dispatch("changeSiteChoice", this.site)
+          this.$store.dispatch("changeMalAniList", malIdList)
+          this.userFound = true
+        })
+        .catch(error => {
+          this.errorMsg = error
+          this.error = true
+          this.isLoading = false
+        })
+      }
     },
-    show(e) {
+    show(e) { // lol
       e.preventDefault()
       this.siteChooser = false
       this.x = e.clientX

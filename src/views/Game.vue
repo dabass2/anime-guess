@@ -6,15 +6,15 @@
 </template>
 
 <script>
-import Login from '../components/Login'
-import GameView from '../components/GameView'
+import Login from "../components/Login";
+import GameView from "../components/GameView";
 
 export default {
   name: "Game",
   data() {
     return {
       ready: false
-    }
+    };
   },
   components: {
     Login,
@@ -22,10 +22,8 @@ export default {
   },
   methods: {
     test(value) {
-      this.ready = value
+      this.ready = value;
     }
   }
 };
 </script>
-
-
