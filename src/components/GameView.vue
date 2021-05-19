@@ -2,10 +2,8 @@
   <v-container>
     <v-row align="center" justify="center">
       <v-col cols="5">
-        <!-- <v-card flat>
-
-        </v-card> -->
-        <v-card width=500 flat color="transparent">
+        <v-card width="500" flat color="transparent">
+          Correct: {{correct}} | Incorrect: {{wrong}}
           <v-progress-linear
             :value="score"
             color="success"
@@ -15,33 +13,22 @@
             rounded
             dark
           ></v-progress-linear>
-          <!-- <v-card v-if="gameReady"> -->  
             <v-img height="60vh" :src="answer.character.image.large"></v-img>
             <v-progress-linear rounded height="8" v-model="currTime" color="blue accent-3"></v-progress-linear>
-          <!-- </v-card> -->
             <v-card-text class="title">
               {{answer.character.name.full}}
-              <!-- <br/> -->
-              <!-- {{correct}} | {{wrong}} <v-btn :disabled="!answered" icon @click="gameSetup(list)"><v-icon>fas fa-arrow-right</v-icon></v-btn> -->
             </v-card-text>
         </v-card>
       </v-col>
-    <!-- </v-row> -->
-
-    <!-- <v-row align="right" justify="center"> -->
       <v-col cols="4" align="center">
-        <!-- <v-btn :loading="!gameReady" v-for="choice in choices" :key="choice.id" :disabled="answered && choice.btnDsbl"
-                @click="userAnswered(choice.character.id)" rounded :color="(answered) ? choice.btnColor : color">
-          <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
-          <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
-        </v-btn> -->
-        <v-card v-for="choice in choices" :key="choice.id" ripple rounded :disabled="answered && choice.btnDsbl"
-                @click="userAnswered(choice.character.id)" :color="(answered) ? choice.btnColor : color">
+        <v-card v-for="choice in choices" :key="choice.id"  :disabled="answered && choice.btnDsbl"
+                @click="userAnswered(choice.character.id)" :color="(answered) ? choice.btnColor : color" outlined rounded class="my-1">
           <v-card-text class="text-h6 white--text">
             <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
             <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
           </v-card-text>
         </v-card>
+        <v-btn :disabled="!answered" outlined text large class="ma-2 black--text" @click="gameSetup(list)">Next<v-icon right dark>fas fa-arrow-right</v-icon></v-btn>
       </v-col>
     </v-row>
   </v-container>
@@ -336,5 +323,4 @@ export default {
 </script>
 
 <style>
-/* .v-btn__content { width: 100%; white-space: normal; } */
 </style>
