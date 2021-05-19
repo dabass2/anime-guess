@@ -1,47 +1,40 @@
 <template>
-  <v-row align="center" justify="center">
-    <v-col cols="auto">
-      <v-card flat>
-        <v-progress-circular
-          :value="score"
-          color="blue-grey"
-        ></v-progress-circular>
-        {{correct}}
-        {{wrong}}
-        <v-btn :disabled="!answered" icon @click="gameSetup(list)"><v-icon>fas fa-arrow-right</v-icon></v-btn>
-      </v-card>
-      <v-card width=500 flat color="transparent">
-        <v-card v-if="gameReady">
-          <v-img contain height="600" :src="answer.character.image.large"></v-img>
-          {{answer.character.name.full}}
+  <v-container>
+    <v-row align="center" justify="center">
+      <v-col cols="5">
+        <v-card width="500" flat color="transparent">
+          Correct: {{correct}} | Incorrect: {{wrong}}
+          <v-progress-linear
+            :value="score"
+            color="success"
+            background-color="error"
+            size="100"
+            height="7"
+            rounded
+            dark
+          ></v-progress-linear>
+            <v-img height="60vh" :src="answer.character.image.large"></v-img>
+            <v-progress-linear rounded height="8" v-model="currTime" color="blue accent-3"></v-progress-linear>
+            <v-card-text class="title">
+              {{answer.character.name.full}}
+            </v-card-text>
         </v-card>
-        <v-progress-linear v-model="currTime" color="blue accent-3"></v-progress-linear>
-        <v-card-actions>
-          <v-row>
-            <v-col>
-              <!-- <v-btn :loading="!gameReady" v-for="choice in choices" :key="choice.id" :disabled="answered && choice.btnDsbl"
-                      @click="userAnswered(choice.character.id)" rounded :color="(answered) ? choice.btnColor : color">
-                <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
-                <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
-              </v-btn> -->
-              <v-card v-for="choice in choices" :key="choice.id" ripple rounded :disabled="answered && choice.btnDsbl"
-                      @click="userAnswered(choice.character.id)" :color="(answered) ? choice.btnColor : color">
-                <v-card-text class="text-h6 white--text">
-                  <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
-                  <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-        </v-card-actions>
-      </v-card>
-    </v-col>
-  </v-row>
+      </v-col>
+      <v-col cols="4" align="center">
+        <v-card v-for="choice in choices" :key="choice.id"  :disabled="answered && choice.btnDsbl"
+                @click="userAnswered(choice.character.id)" :color="(answered) ? choice.btnColor : color" outlined rounded class="my-1">
+          <v-card-text class="text-h6 white--text">
+            <div v-if="choice.info.title.english" v-text="choice.info.title.english"></div>
+            <div v-if="!choice.info.title.english" v-text="choice.info.title.romaji"></div>
+          </v-card-text>
+        </v-card>
+        <v-btn :disabled="!answered" outlined text large class="ma-2 black--text" @click="gameSetup(list)">Next<v-icon right dark>fas fa-arrow-right</v-icon></v-btn>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script>
-var cmpList = []
-
 var url = "https://graphql.anilist.co"
 
 var listQuery = `
@@ -94,7 +87,6 @@ query ($idMal: Int) {
   }
 }
 `
-
 var charQuery = `
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
@@ -279,8 +271,8 @@ export default {
       } else {
         getUserAnimeList(this.$store.state.userId)
         .then(list => { // get user cmpltd anime list
-          cmpList = list
-          this.gameSetup(cmpList)
+          this.list = list
+          this.gameSetup(this.list)
         })
       }
     },
@@ -331,5 +323,4 @@ export default {
 </script>
 
 <style>
-/* .v-btn__content { width: 100%; white-space: normal; } */
 </style>
